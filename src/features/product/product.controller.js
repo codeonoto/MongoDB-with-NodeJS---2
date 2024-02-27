@@ -56,8 +56,8 @@ export default class ProductController {
   async rateProduct(req, res) {
     try {
       const userID = req.userID;
-      const productID = req.query.productID;
-      const rating = req.query.rating;
+      const productID = req.body.productID;
+      const rating = req.body.rating;
       this.productRepository.rate(userID, productID, rating);
       return res.status(200).send('Rating has been added');
     } catch (err) {
