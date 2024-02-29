@@ -9,15 +9,16 @@ export default class OrderRepository {
   }
 
   async placeOrder(userId) {
+    const client = getClient();
+    const session = client.startSession();
     try {
-      const client = getClient();
-      const session = client.startSession();
       const db = getDB();
       session.startTransaction();
-      // 1. Get cardItems and calculate totalAmount.
+      // 1. Get cartitems and calculate total amount.
       const items = await this.getTotalAmount(userId, session);
       const finalTotalAmount = items.reduce(
-        (acc, item) => acc + item.totalAmount
+        (acc, item) => acc + item.totalAmount,
+        0
       );
       console.log(finalTotalAmount);
 
@@ -27,7 +28,7 @@ export default class OrderRepository {
         finalTotalAmount,
         new Date()
       );
-      await db.collection(this.collection).insertOne(newOrder, session);
+      await db.collection(this.collection).insertOne(newOrder, { session });
 
       // 3. Reduce the stock.
       for (let item of items) {
@@ -35,21 +36,24 @@ export default class OrderRepository {
           .collection('products')
           .updateOne(
             { _id: item.productID },
-            { $inc: { stock: -item.qunatity } },
+            { $inc: { stock: -item.quantity } },
             { session }
           );
       }
-
-      // 4. Clear the card items.
+      // throw new Error("Something is wrong in placeOrder");
+      // 4. Clear the cart items.
       await db.collection('cartItems').deleteMany(
         {
-          userId: new ObjectId(userId),
+          userID: new ObjectId(userId),
         },
         { session }
       );
-
+      await session.commitTransaction();
+      session.endSession();
       return;
     } catch (err) {
+      await session.abortTransaction();
+      session.endSession();
       console.log(err);
       throw new ApplicationError('Something went wrong with database', 500);
     }
@@ -65,7 +69,7 @@ export default class OrderRepository {
           {
             $match: { userID: new ObjectId(userId) },
           },
-          // 2. Get the products from products collections
+          // 2. Get the products form products collection.
           {
             $lookup: {
               from: 'products',
@@ -74,11 +78,11 @@ export default class OrderRepository {
               as: 'productInfo',
             },
           },
-          // 3. Unwind the productInfo
+          // 3. Unwind the productinfo.
           {
             $unwind: '$productInfo',
           },
-          // 4. Calculate totalAmount for each cartItems.
+          // 4. Calculate totalAmount for each cartitems.
           {
             $addFields: {
               totalAmount: {
