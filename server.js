@@ -3,16 +3,20 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+// Core Imports
 import express from 'express';
 import swagger from 'swagger-ui-express';
 import cors from 'cors';
 
-
+// Router Imports
 import productRouter from './src/features/product/product.routes.js';
 import userRouter from './src/features/user/user.routes.js';
+import cartRouter from './src/features/cart/cartItems.routes.js';
+import orderRouter from './src/features/order/order.routes.js';
+
+// Export Imports
 import bodyParser from 'body-parser';
 import jwtAuth from './src/middlewares/jwt.middleware.js';
-import cartRouter from './src/features/cart/cartItems.routes.js';
 import apiDocs from './swagger.json' assert { type: 'json' };
 import loggerMiddleware from './src/middlewares/logger.middleware.js';
 import ApplicationError from './src/errorHandler/applicationError.js';
@@ -20,7 +24,6 @@ import { connectToMongoDB } from './src/config/mongodb.js';
 
 // 2. Create a Server
 const server = express();
-
 
 // CORS policy configuration using "cors-lib"
 server.use(cors());
@@ -38,6 +41,8 @@ server.use('/api/products', jwtAuth, productRouter);
 server.use('/api/users', userRouter);
 // localhost:3200/api/cart
 server.use('/api/cart', jwtAuth, cartRouter);
+// localhost:3200/api/order
+server.use('/api/order', jwtAuth, orderRouter);
 
 // 3. Defualt request handler
 server.get('/', (req, res) => {
